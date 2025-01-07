@@ -1,249 +1,215 @@
 import tkinter as tk
 from tkinter import messagebox
+import random
 
-# =====================================================
-# Phase 1 : Mise en place des classes de base
-# =====================================================
-
+# Class navir
 class Navire:
-    """
-    Classe représentant un navire dans la Bataille Navale.
-    
-    Attributs :
-    -----------
-    nom : str
-        Nom du navire (ex: "Porte-Avions", "Croiseur", etc.)
-    taille : int
-        Nombre de cases occupées par le navire.
-    positions : list of tuple
-        Liste des coordonnées (ligne, colonne) occupées par le navire.
-    positions_touchees : set of tuple
-        Ensemble des coordonnées du navire qui ont été touchées par un tir.
-    """
-    
     def __init__(self, nom, taille):
         self.nom = nom
         self.taille = taille
         self.positions = []
         self.positions_touchees = set()
-        
+
     def est_touche(self, coord):
-        """
-        Marque la position 'coord' (tuple (ligne, colonne)) comme touchée.
-        """
         if coord in self.positions:
             self.positions_touchees.add(coord)
-    
-    def est_coule(self):
-        """
-        Vérifie si le navire est complètement coulé.
-        """
-        return len(self.positions_touchees) == self.taille
-    
-    def __repr__(self):
-        return f"Navire({self.nom}, taille={self.taille})"
 
+    def est_coule(self):
+        return len(self.positions_touchees) == self.taille
 
 class Plateau:
-    """
-    Classe représentant le plateau de jeu (une grille 10x10 par défaut).
-    
-    Attributs :
-    -----------
-    taille : int
-        Taille de la grille (10 par défaut).
-    grille : list of list
-        Représentation interne de la grille. Peut être utilisée pour
-        stocker des informations (navire, tir manqué, etc.).
-    navires : list of Navire
-        Liste des navires placés sur le plateau.
-    """
-    
     def __init__(self, taille=10):
         self.taille = taille
-        # On initialise la grille avec des valeurs vides (par exemple " ").
         self.grille = [[" " for _ in range(taille)] for _ in range(taille)]
         self.navires = []
-    
+
     def ajouter_navire(self, navire):
-        """
-        Ajoute un navire à la liste des navires. 
-        """
         self.navires.append(navire)
-    
+
     def afficher_grille(self):
-        """
-        Affiche la grille dans la console (debug). 
-        """
         for ligne in self.grille:
             print(" ".join(ligne))
         print()
-        
+
+    def peut_placer_navire(self, navire, lig, col, orien='H'):
+        if orien == 'H':
+            if col + navire.taille > self.taille: 
+                return False
+            for c in range(col, col + navire.taille):
+                if self.grille[lig][c] != " ":
+                    return False
+        else:
+            if lig + navire.taille > self.taille:
+                return False
+            for r in range(lig, lig + navire.taille):
+                if self.grille[r][col] != " ":
+                    return False
+        return True
+
+    def placer_navire(self, navire, lig, col, orien='H'):
+        pos = []
+        if orien == 'H':
+            for c in range(col, col + navire.taille):
+                self.grille[lig][c] = "N"
+                pos.append((lig, c))
+        else:
+            for r in range(lig, lig + navire.taille):
+                self.grille[r][col] = "N"
+                pos.append((r, col))
+        navire.positions = pos
+        self.ajouter_navire(navire)
 
 class Joueur:
-    """
-    Classe représentant un joueur (humain ou ordinateur).
-    
-    Attributs :
-    -----------
-    nom : str
-        Nom du joueur.
-    plateau : Plateau
-        Plateau associé au joueur, sur lequel se trouvent ses navires.
-    navires : list of Navire
-        Liste des navires que le joueur possède (optionnel si on les stocke déjà dans Plateau).
-    est_humain : bool
-        Indique si le joueur est contrôlé par un humain ou par l'ordinateur.
-    """
-    
     def __init__(self, nom, plateau=None, est_humain=True):
         self.nom = nom
         self.plateau = plateau if plateau else Plateau()
-        self.navires = []
         self.est_humain = est_humain
+        self.navires = []
 
     def ajouter_navire(self, navire):
-        """
-        Ajoute un navire à la flotte du joueur.
-        """
         self.navires.append(navire)
-        self.plateau.ajouter_navire(navire)
 
     def afficher_plateau(self):
-        """
-        Affiche la grille du joueur (debug).
-        """
         print(f"Plateau de {self.nom}:")
         self.plateau.afficher_grille()
 
-    # Méthodes possibles pour plus tard :
-    # def tirer(self, adversaire, coord):
-    #     """
-    #     Tire sur une coordonnée du plateau de l'adversaire.
-    #     """
-    #     pass
+    def placer_navires_aleatoirement(self, liste_navs):
+        for nv in liste_navs:
+            place = False
+            while not place:
+                orien = random.choice(['H', 'V'])
+                lig = random.randint(0, self.plateau.taille - 1)
+                col = random.randint(0, self.plateau.taille - 1)
 
-
-# =====================================================
-# Phase 2 : Interface utilisateur (Tkinter)
-# =====================================================
+                if self.plateau.peut_placer_navire(nv, lig, col, orien):
+                    self.plateau.placer_navire(nv, lig, col, orien)
+                    self.navires.append(nv)
+                    place = True
 
 class ApplicationBatailleNavale:
-    """
-    Classe gérant l'interface utilisateur avec Tkinter.
-    Elle crée deux grilles : 
-      - La grille du joueur
-      - La grille de l'ordinateur
-    Ainsi que des boutons pour les interactions.
-    """
     def __init__(self, root):
         self.root = root
-        self.root.title("Bataille Navale - Phase 2")
-
-        # Création de deux joueurs (humain et ordinateur)
+        self.root.title("Bataille Navale - Phase 3")
+        
+        self.orientation = 'H'   # orientation par defaut
+        self.liste_navires = [
+            ("Porte-Avions", 5),
+            ("Croiseur", 4),
+            ("Destroyer1", 3),
+            ("Destroyer2", 3),
+            ("Sous-Marin1", 2),
+            ("Sous-Marin2", 2)
+        ]
         self.joueur1 = Joueur("Joueur 1", est_humain=True)
         self.joueur2 = Joueur("Ordinateur", est_humain=False)
 
-        # Exemple de navires (vous pourrez ajouter la phase de placement plus tard)
-        porte_avions = Navire("Porte-Avions", 5)
-        croiseur = Navire("Croiseur", 4)
-        destroyer = Navire("Destroyer", 3)
+        self.navire_index = 0
+        self.phase_placement_terminee = False
         
-        # On ajoute quelques navires au joueur1 et au joueur2 pour illustrer
-        self.joueur1.ajouter_navire(porte_avions)
-        self.joueur1.ajouter_navire(croiseur)
-        self.joueur2.ajouter_navire(destroyer)
+        navs_ordi = [Navire(n, t) for (n, t) in self.liste_navires]
+        self.joueur2.placer_navires_aleatoirement(navs_ordi)
 
-        # Frames pour les deux grilles
         self.frame_joueur = tk.Frame(self.root, padx=10, pady=10, borderwidth=2, relief="groove")
         self.frame_joueur.pack(side="left", expand=True, fill="both")
 
         self.frame_ordinateur = tk.Frame(self.root, padx=10, pady=10, borderwidth=2, relief="groove")
         self.frame_ordinateur.pack(side="right", expand=True, fill="both")
 
-        # Titre sur chaque frame
         tk.Label(self.frame_joueur, text="Grille du Joueur", font=("Arial", 14, "bold")).pack(pady=5)
-        tk.Label(self.frame_ordinateur, text="Grille de l'Ordinateur", font=("Arial", 14, "bold")).pack(pady=5)
+        tk.Label(self.frame_ordinateur, text="Grille Ordinateur", font=("Arial", 14, "bold")).pack(pady=5)
 
-        # Conteneurs pour les grilles (on va y placer des boutons)
         self.canvas_joueur = tk.Frame(self.frame_joueur)
         self.canvas_joueur.pack()
-
         self.canvas_ordinateur = tk.Frame(self.frame_ordinateur)
         self.canvas_ordinateur.pack()
 
-        # Création des grilles de boutons
         self.grille_boutons_joueur = []
         self.grille_boutons_ordinateur = []
-
         self.creer_grille_joueur()
         self.creer_grille_ordinateur()
 
-        # Bouton pour lancer une nouvelle partie (exemple)
         self.btn_nouvelle_partie = tk.Button(self.root, text="Nouvelle Partie", command=self.nouvelle_partie)
         self.btn_nouvelle_partie.pack(pady=10)
 
+        # Bouton pour changer l’orientation
+        self.btn_orientation = tk.Button(self.root, text="Orientation: Horizontale", command=self.changer_orientation)
+        self.btn_orientation.pack(pady=5)
+
+        self.label_info = tk.Label(self.root, text="Cliquez sur votre grille pur placer un navire.")
+        self.label_info.pack(pady=5)
+
     def creer_grille_joueur(self):
-        """
-        Crée la grille de boutons pour le joueur.
-        """
         for i in range(self.joueur1.plateau.taille):
             ligne_boutons = []
             for j in range(self.joueur1.plateau.taille):
-                btn = tk.Button(
-                    self.canvas_joueur,
-                    text=" ",
-                    width=3,
-                    height=1,
-                    command=lambda r=i, c=j: self.on_case_joueur_click(r, c)
-                )
+                btn = tk.Button(self.canvas_joueur, text=" ", width=6, height=2,
+                                command=lambda r=i, c=j: self.on_case_joueur_click(r, c))
                 btn.grid(row=i, column=j, padx=1, pady=1)
                 ligne_boutons.append(btn)
             self.grille_boutons_joueur.append(ligne_boutons)
 
     def creer_grille_ordinateur(self):
-        """
-        Crée la grille de boutons pour l'ordinateur.
-        """
         for i in range(self.joueur2.plateau.taille):
             ligne_boutons = []
             for j in range(self.joueur2.plateau.taille):
-                btn = tk.Button(
-                    self.canvas_ordinateur,
-                    text=" ",
-                    width=3,
-                    height=1,
-                    command=lambda r=i, c=j: self.on_case_ordinateur_click(r, c)
-                )
+                btn = tk.Button(self.canvas_ordinateur, text=" ", width=6, height=2,
+                                command=lambda r=i, c=j: self.on_case_ordinateur_click(r, c))
                 btn.grid(row=i, column=j, padx=1, pady=1)
                 ligne_boutons.append(btn)
             self.grille_boutons_ordinateur.append(ligne_boutons)
 
+    def changer_orientation(self):
+        if self.orientation == 'H':
+            self.orientation = 'V'
+            self.btn_orientation.config(text="Orientation: Verticale")
+        else:
+            self.orientation = 'H'
+            self.btn_orientation.config(text="Orientation: Horizontale")
+
     def on_case_joueur_click(self, i, j):
-        """
-        Clique sur la grille du joueur.
-        """
-        messagebox.showinfo("Info", f"Vous avez cliqué sur la case ({i}, {j}) de votre propre grille.")
+        if self.phase_placement_terminee:
+            messagebox.showinfo("Placement terminé", "Tous les navires deja placés.")
+            return
+
+        if self.navire_index >= len(self.liste_navires):
+            messagebox.showinfo("Placement terminé", "Tous les navires deja placés.")
+            return
+
+        nom, taille = self.liste_navires[self.navire_index]
+        nav = Navire(nom, taille)
+
+        if self.joueur1.plateau.peut_placer_navire(nav, i, j, self.orientation):
+            self.joueur1.plateau.placer_navire(nav, i, j, self.orientation)
+            self.joueur1.ajouter_navire(nav)
+
+            if self.orientation == 'H':
+                for c in range(j, j + taille):
+                    self.grille_boutons_joueur[i][c].config(text="N", state="disabled")
+            else:
+                for r in range(i, i + taille):
+                    self.grille_boutons_joueur[r][j].config(text="N", state="disabled")
+
+            self.navire_index += 1
+            if self.navire_index == len(self.liste_navires):
+                self.phase_placement_terminee = True
+                messagebox.showinfo("Placement fini", "Tous les navires placés!")
+        else:
+            messagebox.showwarning("Impossible", "Placment impossible ici.")
 
     def on_case_ordinateur_click(self, i, j):
-        """
-        Clique sur la grille de l'ordinateur.
-        """
-        messagebox.showinfo("Tir", f"Vous tirez sur la case ({i}, {j}) de la grille de l'ordinateur.")
+        if not self.phase_placement_terminee:
+            messagebox.showinfo("Info", "Placer d’abord tous vos navires!")
+            return
+        messagebox.showinfo("Tir", f"Tir sur ({i}, {j})... (non implémenté)")
 
     def nouvelle_partie(self):
-        """
-        Réinitialise les plateaux
-        """
-        messagebox.showinfo("Nouvelle Partie", "Réinitialisation des plateaux.")
-        # Vous pourriez ici recréer des instances de Joueur, vider les grilles, etc.
-
-
-# =====================================================
-# Exemple d'utilisation et lancement de l'interface
-# =====================================================
+        messagebox.showinfo("Nouvelle Partie", "Réinit.")
+        self.root.destroy()
+        root = tk.Tk()
+        ApplicationBatailleNavale(root)
+        root.mainloop()
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = ApplicationBatailleNavale(root)
+    ApplicationBatailleNavale(root)
     root.mainloop()
