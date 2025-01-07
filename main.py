@@ -1,3 +1,6 @@
+import tkinter as tk
+from tkinter import messagebox
+
 # =====================================================
 # Phase 1 : Mise en place des classes de base
 # =====================================================
@@ -65,27 +68,17 @@ class Plateau:
     def ajouter_navire(self, navire):
         """
         Ajoute un navire à la liste des navires. 
-        (La logique de placement n'est pas encore implémentée ici.)
         """
         self.navires.append(navire)
     
     def afficher_grille(self):
         """
-        Affiche la grille dans la console (principalement pour le débogage).
-        Chaque case est séparée par un espace.
+        Affiche la grille dans la console (debug). 
         """
         for ligne in self.grille:
             print(" ".join(ligne))
         print()
         
-    # Méthode possible pour plus tard (exemple) :
-    # def placer_navire(self, navire, ligne_depart, col_depart, orientation):
-    #     """
-    #     Place le navire sur la grille à partir de (ligne_depart, col_depart).
-    #     Orientation peut être 'H' ou 'V'.
-    #     """
-    #     pass
-
 
 class Joueur:
     """
@@ -118,12 +111,12 @@ class Joueur:
 
     def afficher_plateau(self):
         """
-        Affiche la grille du joueur (principalement pour le débogage).
+        Affiche la grille du joueur (debug).
         """
         print(f"Plateau de {self.nom}:")
         self.plateau.afficher_grille()
 
-    # Méthodes possibles pour plus tard (exemple) :
+    # Méthodes possibles pour plus tard :
     # def tirer(self, adversaire, coord):
     #     """
     #     Tire sur une coordonnée du plateau de l'adversaire.
@@ -132,28 +125,125 @@ class Joueur:
 
 
 # =====================================================
-# Exemple d'utilisation et initialisation
+# Phase 2 : Interface utilisateur (Tkinter)
+# =====================================================
+
+class ApplicationBatailleNavale:
+    """
+    Classe gérant l'interface utilisateur avec Tkinter.
+    Elle crée deux grilles : 
+      - La grille du joueur
+      - La grille de l'ordinateur
+    Ainsi que des boutons pour les interactions.
+    """
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Bataille Navale - Phase 2")
+
+        # Création de deux joueurs (humain et ordinateur)
+        self.joueur1 = Joueur("Joueur 1", est_humain=True)
+        self.joueur2 = Joueur("Ordinateur", est_humain=False)
+
+        # Exemple de navires (vous pourrez ajouter la phase de placement plus tard)
+        porte_avions = Navire("Porte-Avions", 5)
+        croiseur = Navire("Croiseur", 4)
+        destroyer = Navire("Destroyer", 3)
+        
+        # On ajoute quelques navires au joueur1 et au joueur2 pour illustrer
+        self.joueur1.ajouter_navire(porte_avions)
+        self.joueur1.ajouter_navire(croiseur)
+        self.joueur2.ajouter_navire(destroyer)
+
+        # Frames pour les deux grilles
+        self.frame_joueur = tk.Frame(self.root, padx=10, pady=10, borderwidth=2, relief="groove")
+        self.frame_joueur.pack(side="left", expand=True, fill="both")
+
+        self.frame_ordinateur = tk.Frame(self.root, padx=10, pady=10, borderwidth=2, relief="groove")
+        self.frame_ordinateur.pack(side="right", expand=True, fill="both")
+
+        # Titre sur chaque frame
+        tk.Label(self.frame_joueur, text="Grille du Joueur", font=("Arial", 14, "bold")).pack(pady=5)
+        tk.Label(self.frame_ordinateur, text="Grille de l'Ordinateur", font=("Arial", 14, "bold")).pack(pady=5)
+
+        # Conteneurs pour les grilles (on va y placer des boutons)
+        self.canvas_joueur = tk.Frame(self.frame_joueur)
+        self.canvas_joueur.pack()
+
+        self.canvas_ordinateur = tk.Frame(self.frame_ordinateur)
+        self.canvas_ordinateur.pack()
+
+        # Création des grilles de boutons
+        self.grille_boutons_joueur = []
+        self.grille_boutons_ordinateur = []
+
+        self.creer_grille_joueur()
+        self.creer_grille_ordinateur()
+
+        # Bouton pour lancer une nouvelle partie (exemple)
+        self.btn_nouvelle_partie = tk.Button(self.root, text="Nouvelle Partie", command=self.nouvelle_partie)
+        self.btn_nouvelle_partie.pack(pady=10)
+
+    def creer_grille_joueur(self):
+        """
+        Crée la grille de boutons pour le joueur.
+        """
+        for i in range(self.joueur1.plateau.taille):
+            ligne_boutons = []
+            for j in range(self.joueur1.plateau.taille):
+                btn = tk.Button(
+                    self.canvas_joueur,
+                    text=" ",
+                    width=3,
+                    height=1,
+                    command=lambda r=i, c=j: self.on_case_joueur_click(r, c)
+                )
+                btn.grid(row=i, column=j, padx=1, pady=1)
+                ligne_boutons.append(btn)
+            self.grille_boutons_joueur.append(ligne_boutons)
+
+    def creer_grille_ordinateur(self):
+        """
+        Crée la grille de boutons pour l'ordinateur.
+        """
+        for i in range(self.joueur2.plateau.taille):
+            ligne_boutons = []
+            for j in range(self.joueur2.plateau.taille):
+                btn = tk.Button(
+                    self.canvas_ordinateur,
+                    text=" ",
+                    width=3,
+                    height=1,
+                    command=lambda r=i, c=j: self.on_case_ordinateur_click(r, c)
+                )
+                btn.grid(row=i, column=j, padx=1, pady=1)
+                ligne_boutons.append(btn)
+            self.grille_boutons_ordinateur.append(ligne_boutons)
+
+    def on_case_joueur_click(self, i, j):
+        """
+        Clique sur la grille du joueur.
+        """
+        messagebox.showinfo("Info", f"Vous avez cliqué sur la case ({i}, {j}) de votre propre grille.")
+
+    def on_case_ordinateur_click(self, i, j):
+        """
+        Clique sur la grille de l'ordinateur.
+        """
+        messagebox.showinfo("Tir", f"Vous tirez sur la case ({i}, {j}) de la grille de l'ordinateur.")
+
+    def nouvelle_partie(self):
+        """
+        Réinitialise les plateaux
+        """
+        messagebox.showinfo("Nouvelle Partie", "Réinitialisation des plateaux.")
+        # Vous pourriez ici recréer des instances de Joueur, vider les grilles, etc.
+
+
+# =====================================================
+# Exemple d'utilisation et lancement de l'interface
 # =====================================================
 
 if __name__ == "__main__":
-    # Création d'un joueur humain
-    joueur1 = Joueur("Joueur 1", est_humain=True)
-    
-    # Création d'un deuxième joueur (ordinateur)
-    joueur2 = Joueur("Ordinateur", est_humain=False)
-    
-    # Exemple de création de navires
-    porte_avions = Navire("Porte-Avions", 5)
-    croiseur = Navire("Croiseur", 4)
-    
-    # Ajout des navires au premier joueur
-    joueur1.ajouter_navire(porte_avions)
-    joueur1.ajouter_navire(croiseur)
-    
-    # Affichage du plateau du joueur 1 (pour debug)
-    joueur1.afficher_plateau()
-    
-    # Même chose pour l'ordinateur
-    destroyer = Navire("Destroyer", 3)
-    joueur2.ajouter_navire(destroyer)
-    joueur2.afficher_plateau()
+    root = tk.Tk()
+    app = ApplicationBatailleNavale(root)
+    root.mainloop()
